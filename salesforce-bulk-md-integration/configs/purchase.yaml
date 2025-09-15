@@ -1,0 +1,22 @@
+master_key: PUR
+sf_object: Purchase__c
+operation: upsert
+external_id_field: SlipNumber__c   # 伝票番号を外部IDとして利用する想定
+
+input_encoding: cp932
+output_encoding: utf-8
+lineterminator: "\n"
+delimiter: ","
+has_header: false
+output_csv: output/Purchase_upsert_ready.csv
+
+owner_id_column: OwnerId
+owner_id_value: ""
+extra_fields:
+  MdSourceSystem__c: "MD"
+
+mapping:
+  - { index: 0, field: SlipNumber__c }
+  - { index: 1, field: StoreId__c }
+  - { index: 2, field: SupplierId__c }
+  - { index: 3, field: Status__c }

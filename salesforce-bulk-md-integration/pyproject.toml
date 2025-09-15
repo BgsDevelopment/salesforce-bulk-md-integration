@@ -1,0 +1,18 @@
+﻿[project]
+name = "bgs-bd-sf-bulk"
+version = "0.1.0"
+description = "Bulk API utilities for Salesforce (MD ? SF data integration)."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "requests>=2.32.0",
+  "python-dotenv>=1.0.1",
+  "pandas>=2.2.0",
+]
+
+[tool.uv]
+# uv を使う場合の設定（必要に応じて拡張）
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
