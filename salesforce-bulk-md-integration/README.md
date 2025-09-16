@@ -54,27 +54,46 @@ API_VER=62.0
 ### YAMLの基本構造（例: Department__c）
 
 ```yaml
-master_key: DPT
-sf_object: Department__c
-operation: upsert
-external_id_field: External_Id__c
+# 汎用マスタ変換 設定ファイル（例：DPTマスタ）
+# - 拡張子 .yaml / .yml / .json のいずれかで保存可能
+# - ここでは YAML 例を記載
 
-input_encoding: cp932
-output_encoding: utf-8
-lineterminator: "\n"
-delimiter: ","
-has_header: false
-output_csv: output/Department_upsert_ready.csv
+# --- 論理名/メタ情報 ---
+master_key: "DPT"          # 出力ファイル名等で使用
+sf_object: "Department__c" # 参考: 後段のBulk処理で使うならここに
+operation: "upsert"        # 参考: upsert/insert/update/delete 等
+external_id_field: "DptCode__c"  # 参考: upsert時の外部ID
 
-owner_id_column: OwnerId
-owner_id_value: ""
-extra_fields:
-  MdSourceSystem__c: "MD"
+# --- 入出力の基本設定 ---
+input_encoding: "cp932"    # MD の ALL の典型
+output_encoding: "utf-8"   # Salesforce 取込向け
+lineterminator: "\n"       # LF 固定
+delimiter: ","             # 入力ファイルの区切り文字
+has_header: false          # MD の ALL は通常ヘッダ無し
 
+# --- 追加列の制御 ---
+owner_id_column: "OwnerId" # 列を追加したくない場合は null にする
+owner_id_value: ""         # 空ならSFで自動割当想定
+extra_fields: {}           # 任意の固定列 {"LogisticsType__c": "0"} など
+
+# --- マッピング ---
+# index: 入力の列インデックス（0始まり）。has_header=true の場合は列名でもOK。
+# field: Salesforce 側の API 項目名
 mapping:
-  - { index: 0, field: External_Id__c }
-  - { index: 1, field: DptCode__c }
-  - { index: 2, field: DptName__c }
+  - { index: 1,  field: "MdScheduledModDate__c" }
+  - { index: 2,  field: "MdMaintenanceCreateDate__c" }
+  - { index: 7,  field: "DptCode__c" }
+  - { index: 9,  field: "Name" }
+  - { index: 10, field: "DptNameKana__c" }
+  - { index: 11, field: "InventoryUpdateTypeCode__c" }
+  - { index: 12, field: "TaxTypeLabelCode__c" }
+  - { index: 13, field: "NonSalesFlagCode__c" }
+  - { index: 23, field: "MdRegistDate__c" }
+  - { index: 24, field: "MdModDate__c" }
+
+# --- 出力ファイル名（任意） ---
+# 省略時は "output/<master_key>_upsert_ready.csv"
+output_csv: "output/Department_upsert_ready.csv"
 ```
 
 ### 他オブジェクトのテンプレート
