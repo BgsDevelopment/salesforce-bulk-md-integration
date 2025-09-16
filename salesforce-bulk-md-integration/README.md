@@ -166,14 +166,9 @@ uv run python scripts/export_soql.py `
 > 出力は `output/<timestamp>_export.csv` に保存されます。  
 > 2ページ目以降のヘッダは自動で削除され、1つのCSVにまとまります。
 
-
-```powershell
-uv run python scripts/export_soql.py --soql "SELECT Id, Name FROM Account LIMIT 10"
-```
-
 ---
 
-## 🚑 トラブルシュート
+## トラブルシュート
 
 - 認証エラー：`invalid_client` → Connected App, Scope, URL整合を確認
 - CSVアップロード失敗：改行LF, UTF-8, 項目API名, FLSを確認
@@ -182,7 +177,7 @@ uv run python scripts/export_soql.py --soql "SELECT Id, Name FROM Account LIMIT 
 
 ---
 
-## 📚 モジュール関係
+## モジュール関係
 
 - `convert_master_generic.py` … 変換（YAML駆動）
 - `bulk_upsert.py` … 取込（Ingest：ジョブ作成〜完了待ち）
