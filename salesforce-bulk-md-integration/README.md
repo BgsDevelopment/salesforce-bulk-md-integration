@@ -60,7 +60,7 @@ API_VER=62.0
 
 # --- 論理名/メタ情報 ---
 master_key: "DPT"          # 出力ファイル名等で使用
-sf_object: "Department__c" # 参考: 後段のBulk処理で使うならここに
+sf_object: "Department__c" # Salesforce 側の  API参照名（オブジェクト名）
 operation: "upsert"        # 参考: upsert/insert/update/delete 等
 external_id_field: "DptCode__c"  # 参考: upsert時の外部ID
 
