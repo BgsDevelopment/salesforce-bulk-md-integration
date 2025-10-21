@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "bgs-bd-sf-bulk"
 version = "0.1.0"
 description = "Bulk API utilities for Salesforce (MD ? SF data integration)."
@@ -8,6 +8,7 @@ dependencies = [
   "requests>=2.32.0",
   "python-dotenv>=1.0.1",
   "pandas>=2.2.0",
+  "pyyaml>=6.0.3",
 ]
 
 [tool.uv]

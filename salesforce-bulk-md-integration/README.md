@@ -1,207 +1,200 @@
-# bgs-bd-sf-bulk
+# 🚀 bgs-bd-sf-bulk
 
-本リポジトリは **Salesforce Bulk API 2.0** を用いて、基幹（MD）のマスタ/トランザクションデータを Salesforce に**アップサート／インポート**したり、SOQLで**エクスポート**するための実行環境です。
+このプロジェクトは、**Salesforce Bulk API 2.0** を使って  
+基幹システム（MD）のデータを Salesforce に取り込んだり、  
+Salesforce からデータを CSV で出力（エクスポート）したりするための環境です。
 
-## 📦 リポジトリ構成
+👉 **「MDとSalesforceのデータをつなぐツール集」** 的な物です。
+
+---
+
+## 📂 リポジトリの中身
 
 ```
-bgs-bd-sf-bulk/
-├─ api/
-│  ├─ auth/                   # token_client_credentials.py: Client Credentials 認証
-│  ├─ config/                 # settings.py: 既定値
-│  └─ data_integration/
-│     ├─ convert_master_generic.py   # ★ 汎用コンバータ（YAML/JSON 駆動）
-│     ├─ bulk_upsert.py              # Bulk Ingest（CSVアップロード〜完了待ち）
-│     └─ bulk_export.py              # Bulk Query（SOQL→CSV）
-├─ configs/                   # ★ オブジェクトごとの YAML 設定
+salesforce-bulk-md-integration/
+├─ api/                           # パッケージ（← 直叙：__init__.py を置くと安定）
+│  ├─ auth/                       # Salesforce認証（トークン取得）
+│  │  ├─ __init__.py
+│  │  └─ token_client_credentials.py
+│  ├─ config/                     # 設定（既定値・環境変数読み込み）
+│  │  ├─ __init__.py
+│  │  └─ settings.py
+│  └─ data_integration/           # データ変換・入出力ロジック
+│     ├─ __init__.py
+│     ├─ convert_master_generic.py   # MD(.ALL) → Salesforce CSV 変換
+│     ├─ bulk_upsert.py              # Bulk Ingest: CSVアップロード～完了待ち
+│     └─ bulk_export.py              # SOQL実行 → CSV出力
+├─ configs/                       # オブジェクト別の設定（YAML）
 │  ├─ dpt.yaml
 │  ├─ purchase.yaml
 │  └─ orderdetailmd.yaml
-├─ input/                     # MDのALLファイル配置
-├─ output/                    # 変換済みCSV / 成否結果
-└─ scripts/
-   └─ export_soql.py          # Bulk Export CLI
-.env / .env.local / .env.dev  # 認証情報（UTF-8保存）
+├─ input/                         # MD側の入力ファイル置き場
+├─ output/                        # 変換結果CSVやエクスポート結果
+├─ scripts/
+│  └─ export_soql.py              # SOQLでSalesforceデータをCSV出力（CLI）
+├─ .env / .env.local / .env.dev   # 認証・環境設定（.gitignore 推奨）
+└─ pyproject.toml                 # 依存・ツール設定（uv対応）
 ```
 
 ---
 
-## 🔐 認証（token_client_credentials.py）
+## 🔑 認証の仕組み
 
-`.env` から Salesforce のトークンを取得します。探索順序：`SF_ENV_FILE` → `.env` → `.env.local` → `.env.dev`。
+Salesforceと通信するためには「トークン」が必要です。  
+`api/auth/token_client_credentials.py` が `.env` ファイルから情報を読み取って、自動的にトークンを取得します。
+
+### `.env` の設定例
 
 ```dotenv
 SF_TOKEN_URL=https://test.salesforce.com/services/oauth2/token
-SF_CLIENT_ID=＜Connected App Consumer Key＞
-SF_CLIENT_SECRET=＜Connected App Consumer Secret＞
+SF_CLIENT_ID=＜Connected AppのConsumer Key＞
+SF_CLIENT_SECRET=＜Connected AppのConsumer Secret＞
 SF_INSTANCE_URL=https://xxxx.my.salesforce.com
 
-# 任意の既定値（settings.pyに無ければ利用）
+# 以下は任意（設定がなければデフォルト値が使われます）
 SFOBJ=Department__c
 OPERATION=upsert
 EXTERNAL_ID_FIELD=External_Id__c
 API_VER=62.0
 ```
 
-失敗時はヒント付き例外を返します。
+`.env` が見つからない場合は、`.env.local` や `.env.dev` も順に探します。
 
 ---
 
-## 🧩 YAML仕様と運用ルール
+## 🧩 YAML設定ファイルとは？
 
-各オブジェクトごとに `configs/` 以下に YAML を作成します。`convert_master_generic.py` がこの設定を読み取り、ALLファイルを Salesforce 取込用のCSVに変換します。
+MDデータ（ALLファイル）を Salesforce 取込用の CSV に変換するために、  
+各オブジェクト（例：部署マスタ、仕入伝票など）ごとに設定ファイル（YAML）を用意します。
 
-### YAMLの基本構造（例: Department__c）
+変換のルール（どの列をどの項目に対応させるか）は YAML に書かれています。
+
+### YAML の例（Department__c）
 
 ```yaml
-# 汎用マスタ変換 設定ファイル（例：DPTマスタ）
-# - 拡張子 .yaml / .yml / .json のいずれかで保存可能
-# - ここでは YAML 例を記載
+# Department__c の変換設定
+master_key: "DPT"                  # ファイル名などで使用
+sf_object: "Department__c"         # Salesforceのオブジェクト名
+operation: "upsert"                # 実行方法（upsert/insert/updateなど）
+external_id_field: "DptCode__c"    # upsert時の外部キー
 
-# --- 論理名/メタ情報 ---
-master_key: "DPT"          # 出力ファイル名等で使用
-sf_object: "Department__c" # Salesforce 側の  API参照名（オブジェクト名）
-operation: "upsert"        # 参考: upsert/insert/update/delete 等
-external_id_field: "DptCode__c"  # 参考: upsert時の外部ID
+# 入出力設定
+input_encoding: "cp932"            # MDファイルの文字コード（Shift-JIS系）
+output_encoding: "utf-8"           # Salesforce用はUTF-8推奨
+has_header: false                  # MDファイルにヘッダー行が無い場合はfalse
 
-# --- 入出力の基本設定 ---
-input_encoding: "cp932"    # MD の ALL の典型
-output_encoding: "utf-8"   # Salesforce 取込向け
-lineterminator: "\n"       # LF 固定
-delimiter: ","             # 入力ファイルの区切り文字
-has_header: false          # MD の ALL は通常ヘッダ無し
-
-# --- 追加列の制御 ---
-owner_id_column: "OwnerId" # 列を追加したくない場合は null にする
-owner_id_value: ""         # 空ならSFで自動割当想定
-extra_fields: {}           # 任意の固定列 {"LogisticsType__c": "0"} など
-
-# --- マッピング ---
-# index: 入力の列インデックス（0始まり）。has_header=true の場合は列名でもOK。
-# field: Salesforce 側の API 項目名
+# マッピング設定（どの列がどのSalesforce項目に対応するか）
 mapping:
   - { index: 1,  field: "MdScheduledModDate__c" }
   - { index: 2,  field: "MdMaintenanceCreateDate__c" }
   - { index: 7,  field: "DptCode__c" }
   - { index: 9,  field: "Name" }
   - { index: 10, field: "DptNameKana__c" }
-  - { index: 11, field: "InventoryUpdateTypeCode__c" }
-  - { index: 12, field: "TaxTypeLabelCode__c" }
-  - { index: 13, field: "NonSalesFlagCode__c" }
-  - { index: 23, field: "MdRegistDate__c" }
-  - { index: 24, field: "MdModDate__c" }
 
-# --- 出力ファイル名（任意） ---
-# 省略時は "output/<master_key>_upsert_ready.csv"
+# 出力ファイル名
 output_csv: "output/Department_upsert_ready.csv"
 ```
 
-### 他オブジェクトのテンプレート
-
-#### `configs/purchase.yaml`（仕入伝票 Purchase__c）
-
-```yaml
-master_key: PUR
-sf_object: Purchase__c
-operation: upsert
-external_id_field: SlipNumber__c
-output_csv: output/Purchase_upsert_ready.csv
-mapping:
-  - { index: 0, field: SlipNumber__c }
-  - { index: 1, field: StoreId__c }
-  - { index: 2, field: SupplierId__c }
-  - { index: 3, field: Status__c }
-```
-
-#### `configs/orderdetailmd.yaml`（発注商品 OrderDetailMD__c）
-
-```yaml
-master_key: ODM
-sf_object: OrderDetailMD__c
-operation: upsert
-external_id_field: MdOrderDetailNumber__c
-output_csv: output/OrderDetailMD_upsert_ready.csv
-mapping:
-  - { index: 0, field: MdOrderDetailNumber__c }
-  - { index: 1, field: MdStoreCode__c }
-  - { index: 2, field: ProductJan__c }
-  - { index: 3, field: Qty__c }
-```
-
-> 運用ルール：**必ず configs/ 以下にオブジェクトごとの YAML を配置する**。
+YAMLを見れば、**どの列がどのSalesforce項目に入るか** 一目で分かるようになっています。
 
 ---
 
-## ▶️ 実行方法
+## ▶️ よく使うコマンド
 
-### 変換（ALL → Salesforce CSV）
-
+### 1. 変換（ALL → CSV）
 ```powershell
 uv run -m api.data_integration.convert_master_generic `
-  input\TEST_DIV.ALL `
-  --config configs/purchase.yaml
+  input\test_dpt_1021.ALL `
+  --config configs\dpt.yaml `
+  --output output\DPT_upsert_ready.csv
 ```
 
-- 出力は UTF-8 / LF / ヘッダ付きCSV
-- mapping にない列は出力されません
+- `input` にあるMDファイルを読み込み
+- `configs/dpt.yaml` の設定どおりに変換
+- 結果を `output/` にCSVで出力（UTF-8, LF改行）
 
-### 取込（Ingest）
+---
 
-- **方法1**: 変換済みCSVを `bulk_upsert.py` または curl で投入
-- **方法2**: 薄いラッパー `convert_<master>.py` を用意して、`bulk_upsert.py` の自動検出に乗せる
+### 2. 取込（CSV → Salesforce）
+```powershell
+uv run -m api.md_integration.bulk_upsert DPT output\DPT_upsert_ready.csv
+```
 
-### エクスポート（Query）
-#### エクスポートの実行例
+### 3. 取込（ALL → Salesforce 一気通し）
+```powershell
+uv run -m api.md_integration.bulk_upsert DPT input\test_dpt_1021.ALL
+```
 
-以下のように、SOQLを指定してSalesforceのデータをCSVに出力できます。
+---
 
-- **基本（Accountを10件）**
+## 🗂 出力ファイル（Bulk結果）
+
+- `*_success_raw.csv` / `*_error_raw.csv` … UTF-8 / LF（解析・差分用）  
+- `*_success.csv` / `*_error.csv` … UTF-8(BOM) / CRLF（Excel用）
+
+---
+
+### ③ Salesforceからデータを出力（エクスポート）
+
+Salesforce内のデータをSOQLで検索してCSVに出力できます。
+
+#### 例1：Accountを10件出力
 ```powershell
 uv run python scripts/export_soql.py --soql "SELECT Id, Name FROM Account LIMIT 10"
 ```
 
-- **任意のオブジェクト（仕入伝票 Purchase__c を出力）**
+#### 例2：仕入伝票を出力
 ```powershell
 uv run python scripts/export_soql.py `
   --soql "SELECT Id, SlipNumber__c, StoreId__c, SupplierId__c, Status__c FROM Purchase__c" `
   --out output/Purchase_export.csv
 ```
 
-- **削除済やアーカイブを含めて出力**
+#### 例3：削除済データを含めて出力
 ```powershell
 uv run python scripts/export_soql.py `
   --soql "SELECT Id, IsDeleted, Name FROM Account" `
   --operation queryAll
 ```
 
-- **大量データを効率的に出力（ページサイズ＋PKチャンク指定）**
-```powershell
-uv run python scripts/export_soql.py `
-  --soql "SELECT Id, Name FROM CustomProduct__c" `
-  --page 150000 `
-  --pk-chunking "chunkSize=100000"
-```
-
-> 出力は `output/<timestamp>_export.csv` に保存されます。  
-> 2ページ目以降のヘッダは自動で削除され、1つのCSVにまとまります。
+出力結果は `output/<日付>_export.csv` に保存されます。  
+複数ページ分も自動で1つのCSVにまとめてくれます。
 
 ---
 
-## トラブルシュート
+## ⚙️ トラブルが出たときは
 
-- 認証エラー：`invalid_client` → Connected App, Scope, URL整合を確認
-- CSVアップロード失敗：改行LF, UTF-8, 項目API名, FLSを確認
-- upsert失敗：external_id_field の指定漏れ/権限不足
-- Excel文字化け：**データ→テキスト/CSV→UTF-8**で読込
-
----
-
-## モジュール関係
-
-- `convert_master_generic.py` … 変換（YAML駆動）
-- `bulk_upsert.py` … 取込（Ingest：ジョブ作成〜完了待ち）
-- `bulk_export.py` / `scripts/export_soql.py` … 出力（Query）
-- `token_client_credentials.py` … 認証（.env自動検出）
+| 症状 | 確認ポイント |
+|------|---------------|
+| `invalid_client` エラー | Connected App の設定（URL・スコープ）を確認 |
+| CSVアップロード失敗 | 改行がLF、文字コードがUTF-8になっているか確認 |
+| upsert失敗 | external_id_field の指定 or 権限不足を確認 |
+| Excelで文字化け | Excelの[データ]→[テキスト/CSVのインポート]→UTF-8指定で開く |
 
 ---
 
+## 🧠 スクリプトまとめ（ざっくり役割）
+
+| ファイル名 | 役割 |
+|-------------|------|
+| `convert_master_generic.py` | MDファイルをSalesforce形式に変換 |
+| `bulk_upsert.py` | SalesforceにCSVをアップロードして登録 |
+| `bulk_export.py` / `export_soql.py` | SalesforceデータをCSVに出力 |
+| `token_client_credentials.py` | Salesforceトークンを取得（認証） |
+
+---
+
+## 💡補足：`uv run`とは？
+
+`uv` は Python の実行・環境管理ツールです。  
+`uv run` の後ろにスクリプトを指定することで、  
+その環境で安全にスクリプトを実行できます。
+
+もし `uv` が入っていない場合は、  
+Python標準のコマンド `python` に置き換えてもOKです。
+
+---
+
+このREADMEを読めば、  
+SalesforceとMDのデータ連携の「入口から出口まで」が一通り理解できるようになります。  
+次は、`configs/` のYAML設定を実際に作ってみると流れがつかめます。
