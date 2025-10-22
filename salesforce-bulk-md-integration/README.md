@@ -117,12 +117,12 @@ uv run -m api.data_integration.convert_master_generic `
 
 ### 2. 取込（CSV → Salesforce）
 ```powershell
-uv run -m api.md_integration.bulk_upsert DPT output\DPT_upsert_ready.csv
+uv run -m api.data_integration.bulk_upsert MASTER_GENERIC output\DPT_upsert_ready.csv
 ```
 
 ### 3. 取込（ALL → Salesforce 一気通し）
 ```powershell
-uv run -m api.md_integration.bulk_upsert DPT input\test_dpt_1021.ALL
+uv run -m api.data_integration.bulk_upsert MASTER_GENERIC input\test_dpt_1021.ALL
 ```
 
 ---
