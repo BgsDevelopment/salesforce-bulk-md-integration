@@ -1,4 +1,10 @@
 # scripts/export_soql.py
+import sys, os
+from pathlib import Path
+
+# 重要: プロジェクトルートを import パスへ追加（scripts の1つ上）
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 import argparse
 import datetime as dt
 import pathlib
@@ -19,7 +25,7 @@ def main():
 
     out = pathlib.Path(args.out) if args.out else pathlib.Path(
         "output") / f"{dt.datetime.now():%Y%m%d_%H%M%S}_export.csv"
-    pkc = args.pk_chunking if args.pk_chunking else None
+    pkc = args.pk_chunking or None
 
     result = export_soql_to_csv(
         soql=args.soql,
@@ -27,7 +33,7 @@ def main():
         operation=args.operation,
         max_records_per_page=args.page,
         pk_chunking=pkc,
-        include_header_once=True
+        include_header_once=True,
     )
     print("✅ Export done")
     print(f"  JobID : {result['job_id']}")
