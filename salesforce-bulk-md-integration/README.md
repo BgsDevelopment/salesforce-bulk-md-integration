@@ -140,7 +140,7 @@ Salesforce内のデータをSOQLで検索してCSVに出力できます。
 
 #### 例1：Accountを10件出力
 ```powershell
-uv run python scripts/export_soql.py --soql "SELECT Id, Name FROM Account LIMIT 10"
+uv run python .\scripts\export_soql.py --soql "SELECT Id, Name FROM Account LIMIT 10"
 ```
 
 #### 例2：仕入伝票を出力

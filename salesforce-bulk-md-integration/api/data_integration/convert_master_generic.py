@@ -167,8 +167,11 @@ def _apply_mapping(
         mapping: List[MappingItem],
         has_header: bool,
 ) -> pd.DataFrame:
-    src_cols: List[Any] = []
-    dst_cols: List[str] = []
+    """
+    mapping の各要素ごとに「ソース列を取り出して目的フィールド名で“個別に”追加」する。
+    同じ source index/name を複数回使っても、それぞれ独立した列として複写される。
+    """
+    out_cols: Dict[str, pd.Series] = {}
 
     for m in mapping:
         dst = m.get("field")
@@ -176,33 +179,31 @@ def _apply_mapping(
             raise ValueError(f"mapping 要素に 'field' がありません: {m}")
 
         idx = m.get("index")
+
+        # 参照元列の取得（ヘッダありなら列名も許容）
         if has_header and isinstance(idx, str):
-            # 列名指定（ヘッダあり）
             if idx not in df_raw.columns:
                 raise KeyError(
-                    f"mapping で指定した列名が入力に存在しません: '{idx}' | columns={list(df_raw.columns)[:10]} ...")
-            src_cols.append(idx)
+                    f"mapping で指定した列名が入力に存在しません: '{idx}' | columns={list(df_raw.columns)[:10]} ..."
+                )
+            src_series = df_raw[idx]
         else:
-            # 数値インデックス（0始まり）
             if not isinstance(idx, int):
                 raise TypeError(f"mapping.index は int か、ヘッダありのときは str（列名）にしてください。値={idx!r}")
             max_col = df_raw.shape[1] - 1
             if idx < 0 or idx > max_col:
-                raise IndexError(
-                    f"mapping.index={idx} が範囲外です（0..{max_col}）。入力の列数と mapping を見直してください。")
-            src_cols.append(idx)
+                raise IndexError(f"mapping.index={idx} が範囲外です（0..{max_col}）。")
+            src_series = df_raw.iloc[:, idx]
 
-        dst_cols.append(dst)
+        # 文字列として扱い（前ゼロ保護＆NaN→空文字）
+        series_as_str = src_series.astype(str).fillna("")
 
-    try:
-        df_selected = df_raw[src_cols].copy()
-    except Exception as e:
-        raise KeyError(f"mapping に指定した列が入力に存在しません。src={src_cols}\n詳細: {e}")
+        # 目的フィールド名で“個別”に格納（重複フィールド名は最後が勝つ想定）
+        out_cols[dst] = series_as_str
 
-    # 列名 → Salesforce API名へ
-    rename_map = {src: dst for src, dst in zip(src_cols, dst_cols)}
-    df_selected.rename(columns=rename_map, inplace=True)
-    return df_selected
+    # 列順は mapping の順序を尊重
+    ordered = {m["field"]: out_cols[m["field"]] for m in mapping if m.get("field") in out_cols}
+    return pd.DataFrame(ordered)
 
 
 # ---------------------------------------------------------------

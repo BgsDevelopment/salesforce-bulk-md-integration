@@ -1,0 +1,67 @@
+object_api: "PurchaseDetail__c"
+soql: ""
+out: "output/Purchase_detail.csv"
+operation: "query"
+page: 100000
+pk_chunking: ""
+query_options:
+  where: "PurchaseId__c != null"
+  order_by: ""
+  limit: ""
+
+mappings:
+  - { api: "PurchaseId__c" }
+  - { api: "ProductId__c" }
+  - { api: "Name" }
+
+  - { api: "MdDepartmentCode__c" }
+  - { api: "MdJanCode__c" }
+  - { api: "MdComment__c" }
+  - { api: "MdDataPartitions__c" }
+  - { api: "MdMaintenanceType__c" }
+  - { api: "MdMaintenanceCreateDate__c" }
+  - { api: "MdSubCategoryCode__c" }
+  - { api: "MdDocumentType__c" }
+  - { api: "MdSlipNumber__c" }
+  - { api: "MdBasicUnitPrice__c" }
+  - { api: "MdSupplierCode__c" }
+  - { api: "MdCancellationClassification__c" }
+  - { api: "MdMajorCategoryCode__c" }
+  - { api: "MdOrderExecutionDate__c" }
+  - { api: "MdInstructionNumber__c" }
+  - { api: "MdQuantity__c" }
+  - { api: "MdNewUnitPrice__c" }
+  - { api: "MdUpdateApplicationId__c" }
+  - { api: "MdUpdatedDate__c" }
+  - { api: "MdUpdaterCode__c" }
+  - { api: "MdUpdateDate__c" }
+  - { api: "MdCurrentSellingPrice__c" }
+  - { api: "MdReasonCategory__c" }
+  - { api: "MdCreatedDate__c" }
+  - { api: "MdEmployeeCode__c" }
+  - { api: "MdDestinationStoreTCCode__c" }
+  - { api: "MdDestinationStoreCode__c" }
+  - { api: "MdLineNumber__c" }
+  - { api: "MdAssignedStoreCode__c" }
+
+  # (MD送信) 系（存在すれば拾う）
+  - { api: "MDSendPurchaseDate__c" }
+  - { api: "MdSendDocumentType__c" }
+  - { api: "MdSendSlipNumber__c" }
+  - { api: "MdSendSupplierCode__c" }
+  - { api: "MdSendDepartmentCode__c" }
+  - { api: "MdSendMajorCategoryCode__c" }
+  - { api: "MdSendSubCategoryCode__c" }
+  - { api: "MdSendJanCode__c" }
+  - { api: "MdSendQuantity__c" }
+  - { api: "MdSendBasicUnitPrice__c" }
+  - { api: "MdSendCurrentSellingPrice__c" }
+  - { api: "MdSendNewUnitPrice__c" }
+  - { api: "MdSendCancellationClassification__c" }
+  - { api: "MdSendReasonCategory__c" }
+  - { api: "MdSendInstructionNumber__c" }
+  - { api: "MdSendComment__c" }
+  - { api: "MdSendLogisticsClassification__c" }
+  - { api: "MdSendEmployeeCode__c" }
+  - { api: "MdSendSendLineNumber__c" }
+  - { api: "MdSendAssignedStoreCode__c" }
